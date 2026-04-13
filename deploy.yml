@@ -1,0 +1,47 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - master   # your branch is master
+
+env:
+  AWS_REGION: ap-south-1
+  ECR_REPOSITORY: my-app
+  CLUSTER_NAME: my-cluster
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Configure AWS
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Login to ECR
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - name: Build Image
+      run: docker build -t my-app .
+
+    - name: Tag Image
+      run: docker tag my-app:latest ${{ secrets.ECR_URI }}:latest
+
+    - name: Push to ECR
+      run: docker push ${{ secrets.ECR_URI }}:latest
+
+    - name: Update kubeconfig
+      run: aws eks update-kubeconfig --name $CLUSTER_NAME --region $AWS_REGION
+
+    - name: Deploy
+      run: |
+        kubectl apply -f deployment.yaml
+        kubectl apply -f service.yaml
+
