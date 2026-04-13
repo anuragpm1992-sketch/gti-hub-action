@@ -1,0 +1,25 @@
+name: CI/CD Pipeline
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Login to ECR
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 615821144462.dkr.ecr.us-east-1.amazonaws.com
+
+      - name: Build and Push Docker Image
+        run: |
+          docker build -t app:latest .
+          docker tag app:latest 615821144462.dkr.ecr.us-east-1.amazonaws.com/my-app:latest
+          docker push 615821144462.dkr.ecr.us-east-1.amazonaws.com/my-app:latest
+
